@@ -1,54 +1,56 @@
 # SmartScale
 
-Sistema web para automatizar a criação e gestão de escalas de serviço/plantão em organizações com rotinas de turnos fixos e regras de revezamento — desenvolvido a partir de um caso real de um batalhão militar (**MilScale**) e 
-generalizado para qualquer organização com necessidades semelhantes.
+**Core reutilizável para gestão e geração automática de escalas de turno/plantão**, construído como uma linha de produto de software: a lógica de domínio (elegibilidade, cobertura mínima, distribuição justa, trocas, auditoria) é genérica e configurável — cada organização a adapta às suas próprias regras, sem reescrever o núcleo do sistema.
 
-## O problema
+O projeto nasceu como **MilScale** (estudo de caso aplicado a um batalhão militar) e evoluiu, na disciplina de Desenvolvimento Orientado a Reuso de Software, para o **SmartScale**: a generalização desse núcleo em uma linha de produto, da qual diferentes aplicações podem ser derivadas.
 
-Organizações com escalas de plantão/serviço (forças armadas, hospitais, segurança, operações 24h) frequentemente controlam isso manualmente em planilhas, o que gera:
-- Falta de rastreabilidade sobre trocas de turno
-- Dificuldade em aplicar regras de elegibilidade por cargo/qualificação
-- Nenhuma notificação automática de quem está escalado
-- Processo de aprovação de troca sem fluxo definido
+## O problema (genérico)
 
-## A solução
+Qualquer organização que opere por turnos ou plantões — forças armadas, hospitais, segurança, indústria, operações 24h — enfrenta o mesmo desafio central: montar escalas que respeitem regras de elegibilidade por cargo/qualificação, garantam cobertura mínima, distribuam a carga de forma justa e permitam gerenciar trocas com um fluxo de aprovação auditável. Feito manualmente em planilha, isso não escala, gera erros e abre margem para falhas de cobertura.
 
-O SmartScale digitaliza esse processo com:
-- **Perfis de usuário com permissões diferenciadas** (do colaborador escalado até o gestor da escala)
-- **Regras de elegibilidade configuráveis** — cada função/cargo só pode ser preenchida por quem tem a qualificação exigida
-- **Fluxo de solicitação e aprovação de trocas de turno**, com etapas de triagem antes da aprovação final
-- **Notificação automática** ao colaborador no dia anterior ao seu turno (D-1)
-- **Modelo de dados reutilizável**, pensado para se adaptar a diferentes tipos de organização (não só uma regra fixa de escala)
+## O core
 
-> Este projeto nasceu como **MilScale**, um estudo de caso aplicado a um batalhão militar em Curitiba, e evoluiu para o **SmartScale**: uma versão generalizada do mesmo conceito, capaz de atender qualquer organização com necessidade de escalas de turno.
+O núcleo do SmartScale resolve esse problema de forma **independente de domínio**:
 
-## Principais funcionalidades
+- **Modelo de elegibilidade configurável** — cada organização define seus próprios cargos, qualificações e regras de quem pode ocupar qual função na escala
+- **Motor de geração/otimização de escalas**, respeitando regras de carga horária, descanso obrigatório, cobertura mínima e distribuição justa
+- **Fluxo de solicitação, triagem e aprovação de trocas** entre membros da escala
+- **Perfis de acesso** por papel (colaborador escalado, supervisor, gestor, administrador)
+- **Notificações automáticas** e **auditoria completa** de toda alteração na escala
+- **Edição manual** da escala gerada, com validação de conflitos
 
-- Login e autenticação por perfil
-- Visualização de escala pessoal e completa (conforme permissão)
-- CRUD de regras de escala e de perfis de usuário (para administradores)
-- Solicitação, triagem e aprovação de trocas de turno
-- Bloqueio de dias/travas de escala
-- Notificações automáticas D-1
+O que muda de uma aplicação para outra é só a **camada de configuração**: os cargos, as regras específicas de cada categoria profissional, os setores/unidades e a legislação aplicável. O core (elegibilidade, otimização, trocas, auditoria) é o mesmo.
 
-## Modelagem e design
+## Aplicações construídas sobre o core
+
+Duas aplicações já foram especificadas em cima desse core, cada uma com sua própria configuração de domínio:
+
+### MilScale — aplicação militar
+
+Estudo de caso original: escalas de serviço de um batalhão em Curitiba, com cargos militares (recruta, cabo, sargento, tenente etc.), serviços específicos por posto (guarda, cabo de dia, oficial de dia) e escala no formato Nx1 (N dias livres por 1 de serviço).
+
+### SmartScale Hospitalar — aplicação para ambiente hospitalar
+
+Instanciação do core para hospitais: cobertura mínima por setor crítico (UTI, pronto-socorro, centro cirúrgico), categorias profissionais da saúde (médico, enfermeiro, técnico), conformidade com a CLT e a LGPD, e um motor de otimização (Python + OR-Tools) rodando como worker assíncrono numa arquitetura de microsserviços.
+
+## Modelagem e design (do core)
 
 - Diagrama de casos de uso
 - Modelo lógico de banco de dados
-- Catálogo de requisitos reutilizáveis (pensado para reuso de software / linhas de produto)
+- Catálogo de requisitos reutilizáveis (linha de produto de software)
 - Mapa de empatia e personas
 - Protótipo navegável (Figma/HTML)
 
 ## Status atual
 
-O projeto está na fase de modelagem e prototipação: requisitos levantados, modelo de dados definido, regras de negócio documentadas e telas prototipadas no Figma. A implementação do sistema ainda não foi iniciada.
+O projeto está na fase de **modelagem, prototipação e documentação de arquitetura**. A implementação do core e das aplicações derivadas ainda não foi iniciada.
 
-A construção vai seguir os princípios de desenvolvimento orientado a reuso de software (linha de produto de software), com o sistema estruturado em módulos reutilizáveis — separando o que é comum a qualquer organização (autenticação, gestão de perfis, fluxo de aprovação de trocas) do que é específico de cada tipo de organização (as regras de escala em si).
+A construção vai seguir os princípios de **desenvolvimento orientado a reuso de software**, com o core estruturado em **módulos reutilizáveis**, separando explicitamente o que é comum a qualquer organização (Engenharia de Domínio) do que é específico de cada aplicação derivada, como o MilScale ou o SmartScale Hospitalar (Engenharia de Aplicação).
 
 ## Papel no projeto
 
-Atuei no levantamento de requisitos, modelagem do banco de dados e definição das regras de negócio e fluxo de aprovação de trocas, em equipe (Equipe Tijucas), como parte da disciplina Desenvolvimento Orientado a Reuso de Software (PUCPR).
+Atuei no levantamento de requisitos, modelagem do banco de dados, definição das regras de negócio e fluxo de aprovação de trocas do core, e na documentação de arquitetura da aplicação hospitalar (arc42/C4), em equipe (Equipe Tijucas), nas disciplinas de Desenvolvimento Orientado a Reuso de Software e Arquitetura e Soluções Cloud (PUCPR).
 
 ## Time
 
-Projeto desenvolvido em equipe na PUCPR.
+Projeto desenvolvido em equipe na PUCPR: Enzo Watanabe de Lima, João Guilherme Salomão, João Guilherme Cordeiro e Rafael Zeni.
