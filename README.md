@@ -4,6 +4,13 @@
 
 O projeto nasceu como **MilScale** (estudo de caso aplicado a um batalhão militar) e evoluiu, na disciplina de Desenvolvimento Orientado a Reuso de Software, para o **SmartScale**: a generalização desse núcleo em uma linha de produto, da qual diferentes aplicações podem ser derivadas.
 
+> **Onde está o código:** o core (`smartscale-core`) e a primeira aplicação derivada dele, o **MilScale**, estão implementados em [Jgbr11/Sistema-SmartScale](https://github.com/Jgbr11/Sistema-SmartScale). O sistema inteiro foi montado em torno do core: o MilScale só implementa os pontos de variação dele. Este repositório é a vitrine da linha de produto (o problema, o core e as aplicações).
+
+| Repositório | O que é |
+|---|---|
+| [jgmtz/SmartScale](https://github.com/jgmtz/SmartScale) (este) | Visão geral da linha de produto SmartScale |
+| [Jgbr11/Sistema-SmartScale](https://github.com/Jgbr11/Sistema-SmartScale) | Código: módulo `smartscale-core` + aplicação MilScale |
+
 ## O problema (genérico)
 
 Qualquer organização que opere por turnos ou plantões — forças armadas, hospitais, segurança, indústria, operações 24h — enfrenta o mesmo desafio central: montar escalas que respeitem regras de elegibilidade por cargo/qualificação, garantam cobertura mínima, distribuam a carga de forma justa e permitam gerenciar trocas com um fluxo de aprovação auditável. Feito manualmente em planilha, isso não escala, gera erros e abre margem para falhas de cobertura.
@@ -23,13 +30,40 @@ O que muda de uma aplicação para outra é só a **camada de configuração**: 
 
 ## Aplicações construídas sobre o core
 
-Duas aplicações já foram especificadas em cima desse core, cada uma com sua própria configuração de domínio:
+Duas aplicações foram especificadas em cima desse core, cada uma com sua própria configuração de domínio. A primeira, o MilScale, já está implementada.
 
-### MilScale — aplicação militar
+### MilScale — aplicação militar (implementada)
 
 Estudo de caso original: escalas de serviço de um batalhão em Curitiba, com cargos militares (recruta, cabo, sargento, tenente etc.), serviços específicos por posto (guarda, cabo de dia, oficial de dia) e escala no formato Nx1 (N dias livres por 1 de serviço).
 
-### SmartScale Hospitalar — aplicação para ambiente hospitalar
+Como o core é usado no código ([Jgbr11/Sistema-SmartScale](https://github.com/Jgbr11/Sistema-SmartScale)):
+
+| Core (`smartscale-core`, JAR próprio, sem Spring nem JPA) | Especialização MilScale |
+|---|---|
+| `PessoaEscalada` (interface genérica) | `Militar` |
+| `TipoTurno` (interface genérica) | `TipoServico` |
+| `CriterioDeOrdenacao` (ponto de variação) | `CriterioOrdenacaoMilitar`: maior número de dias sem serviço primeiro |
+| `MotorDeRodizio` (fila e rodízio) | Usado como está, sem nenhuma alteração |
+
+O `MotorDeRodizio` não sabe o que é um militar: ele só enxerga as interfaces do core. Uma aplicação nova da linha, como a hospitalar, reaproveita o motor inteiro e implementa só essas interfaces e o seu próprio critério de ordenação.
+
+**Stack:** Java 21, Spring Boot 3.3, Flyway, MySQL 8 (Docker) e H2; React 19, Vite e TypeScript; testes com JUnit 5 e Vitest.
+
+**Arquitetura:** monólito hexagonal (Ports & Adapters). O `smartscale-core` é um módulo Maven separado, empacotado como JAR próprio, e o backend do MilScale o consome como qualquer outra dependência. No código, o que é genérico está marcado como `NÚCLEO REUTILIZÁVEL (LPS)` e o que é específico como `Especialização MilScale`.
+
+**Variabilidade:** o critério da fila da escala é escolhido por configuração (`maior-folga`, `menor-carga` ou `mais-moderno`), sem mudar código.
+
+**Principais regras de negócio do MilScale:**
+- **Geração da escala:** ninguém tira duas vagas no mesmo dia; intervalo mínimo de 3 dias de folga entre serviços (3x1); quem está afastado não é escalado; a fila prioriza quem está há mais tempo sem servir. Se faltar gente, a escala relaxa só o intervalo mínimo em vez de deixar vaga aberta.
+- **Elegibilidade:** cada tipo de serviço aceita combinações de posto, subunidade e curso.
+- **Trocas de serviço:** substituição ou troca mútua, com o fluxo aceite do colega → triagem do Cabo → autorização do Sargenteante.
+- **Perfis:** Sargenteante, Cabo da Sargenteação, Sd EP da Sargenteação e Militar Escalado, com controle de acesso no servidor.
+- **Escala em rascunho ou publicada**, dias travados manualmente e realocação automática quando surge um afastamento depois da escala pronta.
+- **Privacidade:** dados pessoais só aparecem para a sargenteação ou para a própria pessoa.
+
+Instruções para rodar (backend, frontend e Docker Compose), testes e documentação da disciplina (padrões de projeto, variabilidade e rastreabilidade de requisitos) estão no [repositório do código](https://github.com/Jgbr11/Sistema-SmartScale).
+
+### SmartScale Hospitalar — aplicação para ambiente hospitalar (especificada)
 
 Instanciação do core para hospitais: cobertura mínima por setor crítico (UTI, pronto-socorro, centro cirúrgico), categorias profissionais da saúde (médico, enfermeiro, técnico), conformidade com a CLT e a LGPD, e um motor de otimização (Python + OR-Tools) rodando como worker assíncrono numa arquitetura de microsserviços.
 
@@ -43,9 +77,11 @@ Instanciação do core para hospitais: cobertura mínima por setor crítico (UTI
 
 ## Status atual
 
-O projeto está na fase de **modelagem, prototipação e documentação de arquitetura**. A implementação do core e das aplicações derivadas ainda não foi iniciada.
+- **Core (`smartscale-core`): implementado**, como módulo Maven separado e versionado (1.0.0).
+- **MilScale: implementado** sobre o core, com backend, frontend, testes e Docker Compose.
+- **SmartScale Hospitalar: especificado** (requisitos e arquitetura arc42/C4), ainda sem implementação.
 
-A construção vai seguir os princípios de **desenvolvimento orientado a reuso de software**, com o core estruturado em **módulos reutilizáveis**, separando explicitamente o que é comum a qualquer organização (Engenharia de Domínio) do que é específico de cada aplicação derivada, como o MilScale ou o SmartScale Hospitalar (Engenharia de Aplicação).
+A construção segue os princípios de **desenvolvimento orientado a reuso de software**: o core concentra o que é comum a qualquer organização (Engenharia de Domínio), e cada aplicação derivada, como o MilScale ou o SmartScale Hospitalar, traz só o que é específico dela (Engenharia de Aplicação).
 
 ## Papel no projeto
 
